@@ -148,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	    			create table plans (
 	    				id int not null auto_increment primary key,
 	    				month int not null,
-	    				accumulation_balance_currency int not null,
+	    				remaining_credit_currency int not null,
 	    				earmarked_contribution_currency int not null,
 	    				share_contribution_currency int not null,
 	    				sum_over_month_currency int not null,
@@ -175,9 +175,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		    // Queries that insert values into the tables 
 		    // https://stackoverflow.com/questions/60174/how-can-i-prevent-sql-injection-in-php
     		$create_plan_query = "
-    		insert into plans (month,  accumulation_balance_currency,  earmarked_contribution_currency,
+    		insert into plans (month,  remaining_credit_currency,  earmarked_contribution_currency,
     		     share_contribution_currency,  sum_over_month_currency,  user_id) 
-    			       values(:month, :accumulation_balance_currency, :earmarked_contribution_currency,
+    			       values(:month, :remaining_credit_currency, :earmarked_contribution_currency,
     			:share_contribution_currency, :sum_over_month_currency, :user_id);
     	    ";
 
@@ -230,24 +230,24 @@ insert into overviews(initial_payment_currency,  entrance_fee_currency,  monthly
 
 		    $initial_credit = $price - $initial_payment_currency;
 		    $monthly_payment_percent = 1 / 12 * $annual_payment_percent / 100;
-		    $monthly_payment_currency = $initial_credit * ($monthly_payment_percent + ($monthly_payment_percent / 
-		    	pow(1 + $monthly_payment_percent, $months - 1)));
+		    $monthly_payment_currency = $initial_credit * ($monthly_payment_percent / 
+		    	(1 - pow(1 + $monthly_payment_percent, (0 - $months))));
 
 		    // printNewLine([$initial_payment_currency, $entrance_fee_currency, $monthly_payment_percent, $initial_credit,$monthly_payment_currency]);
 
 
-		    $total_overpayment_currency = 1;
-		    $overpayment_w_entrance_percent = 1;
-		    $overpayment_w_o_entrance_percent = 1;
+		    $total_overpayment_currency = $entrance_fee_currency + ($monthly_payment_currency * $months - $initial_credit);
+		    $overpayment_w_entrance_percent = $total_overpayment_currency / $initial_credit * 100;
+		    $overpayment_w_o_entrance_percent = ($monthly_payment_currency * $months - $initial_credit) / $initial_credit * 100;
 
 
 		    $overview_insert = array(
-		    	':initial_payment_currency' => $initial_payment_currency,
-		    	':entrance_fee_currency' => $entrance_fee_currency,
-		    	':monthly_payment_currency' => 1,
-		    	':total_overpayment_currency' => 1,
-		    	':overpayment_w_entrance_percent' => 1,
-		    	':overpayment_w_o_entrance_percent' => 1,
+		    	':initial_payment_currency' => round($initial_payment_currency),
+		    	':entrance_fee_currency' => round($entrance_fee_currency),
+		    	':monthly_payment_currency' => round($monthly_payment_currency),
+		    	':total_overpayment_currency' => round($total_overpayment_currency),
+		    	':overpayment_w_entrance_percent' => round($overpayment_w_entrance_percent),
+		    	':overpayment_w_o_entrance_percent' => round($overpayment_w_o_entrance_percent),
 		    	':user_id' => $user_id,
 		    );
 		    $prepared_create_overview_query->execute($overview_insert);
@@ -255,16 +255,20 @@ insert into overviews(initial_payment_currency,  entrance_fee_currency,  monthly
 
 
 		    // TABLE 3
+		    $remaining_credit_currency = $initial_credit;
 		    for ($i = 1; $i <= $months; $i++) {
+			    $earmarked_contribution_currency = $remaining_credit_currency * $monthly_payment_percent;
+			    $share_contribution_currency = $monthly_payment_currency - $earmarked_contribution_currency;
 			    $plan_insert = array(
 			    	':month' => $i,
-			    	':accumulation_balance_currency' => 1,
-			    	':earmarked_contribution_currency' => 1,
-			    	':share_contribution_currency' => 1,
-			    	':sum_over_month_currency' => 1,
+			    	':remaining_credit_currency' => round($remaining_credit_currency),
+			    	':earmarked_contribution_currency' => round($earmarked_contribution_currency),
+			    	':share_contribution_currency' => round($share_contribution_currency),
+			    	':sum_over_month_currency' => round($monthly_payment_currency),
 			    	':user_id' => $user_id,
 		    	);
 		    	$prepared_create_plan_query->execute($plan_insert);
+		    	$remaining_credit_currency -= $share_contribution_currency;
 		    }
 
 
@@ -332,20 +336,20 @@ insert into overviews(initial_payment_currency,  entrance_fee_currency,  monthly
 	// // }
 
 
-	3
-	$name = '';
-	$email = '';
-	$message = "Your plan is available: mysite.com/result.php?h={$user_hash}";
-	$subject = "Contact form submitted!";
-	$to = '';
-	$body = $message;
-	$headers = "From: $email\r\n";
-	$headers .= "Content-type: text/html\r\n";
+	// 3
+	// $name = '';
+	// $email = '';
+	// $message = "Your plan is available: mysite.com/result.php?h={$user_hash}";
+	// $subject = "Contact form submitted!";
+	// $to = '';
+	// $body = $message;
+	// $headers = "From: $email\r\n";
+	// $headers .= "Content-type: text/html\r\n";
 
-	mail($to, $subject, $body, $headers);
+	// mail($to, $subject, $body, $headers);
 
 
-//	header('Location: result.php');
+	header('Location: result.php?h=' . $user_hash);
 
 	$conn = null;
 	die();
@@ -370,42 +374,43 @@ label {
 </head>
 <body>
 <form class="main_form" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]);?>" method="POST">
-	<label>email_address:
+	<input type="hidden" name="token" value="<?= $token ?>" />
+	<label>Почта:
 		<input type="email_address" name="email_address" value="john@example.com">
 	</label>
 	<?php if (!empty($email_address_err)): ?>
 		<p class="error"><?= $email_address_err ?></p>
 	<?php endif; ?>
 	
-	<label>Price (kzt):
+	<label>Стоимость недвижимости (тнг):
 		<input type="number" name="price" value="1000000" max="50000000" min="0" step="1">
 	</label>
 	<?php if (!empty($price_err)): ?>
 		<p class="error"><?= $price_err ?></p>
 	<?php endif; ?>
 	
-	<label>initial payment (%):
+	<label>Первоначальный взнос (%):
 		<input type="number" name="initial_payment_percent" value="50" max="100" min="30" step="0.01">
 	</label>
 	<?php if (!empty($initial_payment_percent_err)): ?>
 		<p class="error"><?= $initial_payment_percent_err ?></p>
 	<?php endif; ?>
 	
-	<label>Annual payment (%):
+	<label>Целевой взнос (%):
 		<input type="number" name="annual_payment_percent" value="3" max="3" min="0.5" step="0.01">
 	</label>
 	<?php if (!empty($annual_payment_percent_err)): ?>
 		<p class="error"><?= $annual_payment_percent_err ?></p>
 	<?php endif; ?>
 	
-	<label>Time limit (in months):
+	<label>Срок рассрочки (мес):
 		<input type="number" name="months" value="12" max="180" min="1" step="1">
 	</label>
 	<?php if (!empty($months_err)): ?>
 		<p class="error"><?= $months_err ?></p>
 	<?php endif; ?>
 
-	<input type="submit" name="submit" value="Submit">
+	<input type="submit" name="submit" value="Рассчитать">
 </form>
 </body>
 </html>

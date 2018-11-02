@@ -30,6 +30,18 @@ function convertTextToInt(string $str): int {
 	return (int) $result;
 }
 
+// To send an email start smtp mail-server on port 25
+function sendLinkMail($email_address) {
+	$name = 'avokald';
+	$email = 'baldykov_a@yahoo.com';
+	$message = "Your plan is available: calc.local/result?h={$user_hash}";
+	$subject = "Contact form submitted!";
+	$body = $message;
+	$headers = "From: {$name} at {$email}\r\n";
+	$headers .= "Content-type: text/html\r\n";
+	mail($email_address, $subject, $body, $headers);
+}
+
 $email_address_err = $price_err = $initial_payment_percent_err = $annual_payment_percent_err = $months_err = '';
 $email_address = $price = $initial_payment_percent = $annual_payment_percent = $months = '';
 
@@ -104,123 +116,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		}
 
 		try {
-			include('../env.php');
+			include '../env.php';
+
 			// Connection to database
 		    $conn = new PDO("mysql:host=" . SERVERNAME . ";dbname=" . DBNAME, USERNAME, PASSWORD);
 		    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		    $conn->exec('use calc;');
 			echo 'connected';
 
+		    
+		    include './createTables.php';
 		    // Table existence check and creation
-		    if (!tableExists($conn, 'users')) {
-		    	$conn->exec('
-		    		create table users (
-		    			id int not null auto_increment primary key,
-		    			email_address varchar(255) not null, 
-		        		price int not null, 
-		        		initial_payment_percent float not null, 
-		        		annual_payment_percent float not null, 
-		        		months int not null,
-		        		created_at timestamp default current_timestamp
-		        	);
-		        ');
-		    }
+			if (!tableExists($conn, 'users')) {
+				$tableUsers->initializeTable($conn);
+			}
+			
 
 		    if (!tableExists($conn, 'overviews')) {
-		    	$conn->exec('
-	    			create table overviews (
-	    				id int not null auto_increment primary key,
-	    				initial_payment_currency int not null,
-	    				entrance_fee_currency int not null,
-	    				monthly_payment_currency int not null,
-	    				total_overpayment_currency int not null,
-	    				overpayment_w_entrance_percent int not null,
-	    				overpayment_w_o_entrance_percent int not null,
-		        		user_id int,
-		        		foreign key (user_id) references users(id)
-	    			);
-	    		');
+		    	$tableOverviews->initializeTable($conn);
 		    }
 
 
 		    if (!tableExists($conn, 'plans')) {
-		    	$conn->exec('
-	    			create table plans (
-	    				id int not null auto_increment primary key,
-	    				month int not null,
-	    				remaining_credit_currency int not null,
-	    				earmarked_contribution_currency int not null,
-	    				share_contribution_currency int not null,
-	    				sum_over_month_currency int not null,
-		        		user_id int,
-		        		foreign key (user_id) references users(id)
-	    			);
-	    		');
+		    	$tablePlans->initializeTable($conn);
 		    }
 
-		    // https://stackoverflow.com/questions/13996565/is-there-a-recommended-size-for-a-mysql-primary-key
 		    if (!tableExists($conn, 'hashes')) {
-		    	$conn->exec('
-		    		create table hashes (
-		    			id int not null auto_increment primary key,
-		    			hash varchar(255) unique,
-		    			user_id int,
-		    			foreign key (user_id) references users(id),
-		    			index(hash(64))
-		    		);
-		    	');
+		    	$tableHashes->initializeTable($conn);
 		    }
-
-
-		    // Queries that insert values into the tables 
-		    // https://stackoverflow.com/questions/60174/how-can-i-prevent-sql-injection-in-php
-    		$create_plan_query = "
-    		insert into plans (month,  remaining_credit_currency,  earmarked_contribution_currency,
-    		     share_contribution_currency,  sum_over_month_currency,  user_id) 
-    			       values(:month, :remaining_credit_currency, :earmarked_contribution_currency,
-    			:share_contribution_currency, :sum_over_month_currency, :user_id);
-    	    ";
-
-    	    $create_overview_query = "
-insert into overviews(initial_payment_currency,  entrance_fee_currency,  monthly_payment_currency,
-     total_overpayment_currency,  overpayment_w_entrance_percent,  overpayment_w_o_entrance_percent,  user_id) 
-	          values(:initial_payment_currency, :entrance_fee_currency, :monthly_payment_currency,
-	:total_overpayment_currency, :overpayment_w_entrance_percent, :overpayment_w_o_entrance_percent, :user_id);
-    	    ";
-
-    		$create_user_query = "
-    		insert into users (email_address,  price,  initial_payment_percent,  annual_payment_percent,  months) 
-			           values(:email_address, :price, :initial_payment_percent, :annual_payment_percent, :months);
-		    ";
-
-		    $create_hash_query = "
-		    	insert into hashes (hash, user_id)
-		    			   values (:hash, :user_id);
-		    ";
-
-
-		    // Prepared queries executed with user data
-    		$prepared_create_plan_query = $conn->prepare($create_plan_query);
-
-    		$prepared_create_overview_query = $conn->prepare($create_overview_query);
-
-    		$prepared_create_user_query = $conn->prepare($create_user_query);
-
-    		$prepared_create_hash_query = $conn->prepare($create_hash_query);
-
 
 
 		    $user_insert = array(
-		    	':email_address' => $email_address,
-		    	':price' => $price,
-		    	':initial_payment_percent' => $initial_payment_percent,
-		    	':annual_payment_percent' => $annual_payment_percent,
-		    	':months' => $months,
+		    	'email_address' => $email_address,
+		    	'price' => $price,
+		    	'initial_payment_percent' => $initial_payment_percent,
+		    	'annual_payment_percent' => $annual_payment_percent,
+		    	'months' => $months,
 		    );
 
-		    $prepared_create_user_query->execute($user_insert);
+		    // Queries that insert values into the tables 
+    		$tableUsers->insertValues($user_insert);
 
 		    $user_id = $conn->lastInsertId('id');
+
 
 
 
@@ -233,24 +171,22 @@ insert into overviews(initial_payment_currency,  entrance_fee_currency,  monthly
 		    $monthly_payment_currency = $initial_credit * ($monthly_payment_percent / 
 		    	(1 - pow(1 + $monthly_payment_percent, (0 - $months))));
 
-		    // printNewLine([$initial_payment_currency, $entrance_fee_currency, $monthly_payment_percent, $initial_credit,$monthly_payment_currency]);
-
-
 		    $total_overpayment_currency = $entrance_fee_currency + ($monthly_payment_currency * $months - $initial_credit);
 		    $overpayment_w_entrance_percent = $total_overpayment_currency / $initial_credit * 100;
 		    $overpayment_w_o_entrance_percent = ($monthly_payment_currency * $months - $initial_credit) / $initial_credit * 100;
 
 
 		    $overview_insert = array(
-		    	':initial_payment_currency' => round($initial_payment_currency),
-		    	':entrance_fee_currency' => round($entrance_fee_currency),
-		    	':monthly_payment_currency' => round($monthly_payment_currency),
-		    	':total_overpayment_currency' => round($total_overpayment_currency),
-		    	':overpayment_w_entrance_percent' => round($overpayment_w_entrance_percent),
-		    	':overpayment_w_o_entrance_percent' => round($overpayment_w_o_entrance_percent),
-		    	':user_id' => $user_id,
+		    	'initial_payment_currency' => round($initial_payment_currency),
+		    	'entrance_fee_currency' => round($entrance_fee_currency),
+		    	'monthly_payment_currency' => round($monthly_payment_currency),
+		    	'total_overpayment_currency' => round($total_overpayment_currency),
+		    	'overpayment_w_entrance_percent' => round($overpayment_w_entrance_percent),
+		    	'overpayment_w_o_entrance_percent' => round($overpayment_w_o_entrance_percent),
+		    	'user_id' => $user_id,
 		    );
-		    $prepared_create_overview_query->execute($overview_insert);
+
+		    $tableOverviews->insertValues($overview_insert);
 
 
 
@@ -260,24 +196,28 @@ insert into overviews(initial_payment_currency,  entrance_fee_currency,  monthly
 			    $earmarked_contribution_currency = $remaining_credit_currency * $monthly_payment_percent;
 			    $share_contribution_currency = $monthly_payment_currency - $earmarked_contribution_currency;
 			    $plan_insert = array(
-			    	':month' => $i,
-			    	':remaining_credit_currency' => round($remaining_credit_currency),
-			    	':earmarked_contribution_currency' => round($earmarked_contribution_currency),
-			    	':share_contribution_currency' => round($share_contribution_currency),
-			    	':sum_over_month_currency' => round($monthly_payment_currency),
-			    	':user_id' => $user_id,
+			    	'month' => $i,
+			    	'remaining_credit_currency' => round($remaining_credit_currency),
+			    	'earmarked_contribution_currency' => round($earmarked_contribution_currency),
+			    	'share_contribution_currency' => round($share_contribution_currency),
+			    	'sum_over_month_currency' => round($monthly_payment_currency),
+			    	'user_id' => $user_id,
 		    	);
-		    	$prepared_create_plan_query->execute($plan_insert);
+		    	$tablePlans->insertValues($plan_insert);
 		    	$remaining_credit_currency -= $share_contribution_currency;
 		    }
 
 
 		    // TABLE 4
-		    $user_created_at = $conn->query('select UNIX_TIMESTAMP(created_at) from users where id = ' . $user_id . ';');
+		    //$user_created_at = $conn->query('select UNIX_TIMESTAMP(created_at) from users where id = ' . $user_id . ';');
+		    $user_created_at = $tableUsers->select(['UNIX_TIMESTAMP(created_at)'])
+		                                  ->from()
+		                                  ->where(['id = ' . $user_id])
+		                                  ->getSelection();
 		    // Creating unique hash
 		    $user_hash = hash('sha256', (
 			    			convertTextToInt($email_address)
-			    			. $user_created_at->fetch()[0]
+			    			. $user_created_at[0]
 			    			. $price 
 			    			. $initial_payment_percent 
 			    			. $annual_payment_percent 
@@ -285,28 +225,18 @@ insert into overviews(initial_payment_currency,  entrance_fee_currency,  monthly
 		    );
 
 		    $hash_insert = array(
-		    	':hash' => $user_hash,
-		    	':user_id' => $user_id
+		    	'hash' => $user_hash,
+		    	'user_id' => $user_id
 		    );
 
-		    $prepared_create_hash_query->execute($hash_insert);
+		    $tableHashes->insertValues($hash_insert);
 		}
 		catch(PDOException $e) {
 			$conn = null;
 		    echo "Connection failed: " . $e->getMessage();
 		}
 
-	// To send an email start smtp mail-server on port 25
-	$name = 'avokald';
-	$email = 'baldykov_a@yahoo.com';
-	$message = "Your plan is available: calc.local/result?h={$user_hash}";
-	$subject = "Contact form submitted!";
-	$body = $message;
-	$headers = "From: {$name} at {$email}\r\n";
-	$headers .= "Content-type: text/html\r\n";
-
-	mail($email_address, $subject, $body, $headers);
-
+	sendLinkMail($email_address);
 
 	header('Location: result.php?h=' . $user_hash);
 

@@ -296,57 +296,16 @@ insert into overviews(initial_payment_currency,  entrance_fee_currency,  monthly
 		    echo "Connection failed: " . $e->getMessage();
 		}
 
+	// To send an email start smtp mail-server on port 25
+	$name = 'avokald';
+	$email = 'baldykov_a@yahoo.com';
+	$message = "Your plan is available: calc.local/result?h={$user_hash}";
+	$subject = "Contact form submitted!";
+	$body = $message;
+	$headers = "From: {$name} at {$email}\r\n";
+	$headers .= "Content-type: text/html\r\n";
 
-	// 1
-	// $to      = 'nobody@example.com';
-	// $subject = 'the subject';
-	// $message = "Your plan is available: mysite.com/result.php?h={$user_hash}";
-	// $headers = 'From: webmaster@example.com' . "\r\n" .
-	//     'Reply-To: webmaster@example.com' . "\r\n" .
-	//     'X-Mailer: PHP/' . phpversion();
-	// mail($to, $subject, $message, $headers);
-
-	// 2
-	// require_once('./Mail/Mail.php');
-	// $from = '';
-	// $to = '';
-	// $subject = 'Hi!';
-	// $body = "Your plan is available: mysite.com/result.php?h={$user_hash}";
-
-	// $headers = array(
-	//     'From' => $from,
-	//     'To' => $to,
-	//     'Subject' => $subject
-	// );
-
-	// $smtp = Mail::factory('smtp', array(
-	//         'host' => 'ssl://smtp.gmail.com',
-	//         'port' => '465',
-	//         'auth' => true,
-	//         'username' => '',
-	//         'password' => ''
-	//     ));
-
-	// $mail = $smtp->send($to, $headers, $body);
-
-	// // if (PEAR::isError($mail)) {
-	// //     echo('<p>' . $mail->getMessage() . '</p>');
-	// // } else {
-	// //     echo('<p>Message successfully sent!</p>');
-	// // }
-
-
-	// 3
-	// $name = '';
-	// $email = '';
-	// $message = "Your plan is available: mysite.com/result.php?h={$user_hash}";
-	// $subject = "Contact form submitted!";
-	// $to = '';
-	// $body = $message;
-	// $headers = "From: $email\r\n";
-	// $headers .= "Content-type: text/html\r\n";
-
-	// mail($to, $subject, $body, $headers);
+	mail($email_address, $subject, $body, $headers);
 
 
 	header('Location: result.php?h=' . $user_hash);
@@ -376,35 +335,35 @@ label {
 <form class="main_form" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]);?>" method="POST">
 	<input type="hidden" name="token" value="<?= $token ?>" />
 	<label>Почта:
-		<input type="email_address" name="email_address" value="john@example.com">
+		<input type="email_address" name="email_address" placeholder="john@example.com">
 	</label>
 	<?php if (!empty($email_address_err)): ?>
 		<p class="error"><?= $email_address_err ?></p>
 	<?php endif; ?>
 	
-	<label>Стоимость недвижимости (тнг):
-		<input type="number" name="price" value="1000000" max="50000000" min="0" step="1">
+	<label>Стоимость недвижимости (не более 50'000'000 тнг.):
+		<input type="number" name="price" placeholder="10000000" max="50000000" min="0" step="1">
 	</label>
 	<?php if (!empty($price_err)): ?>
 		<p class="error"><?= $price_err ?></p>
 	<?php endif; ?>
 	
-	<label>Первоначальный взнос (%):
-		<input type="number" name="initial_payment_percent" value="50" max="100" min="30" step="0.01">
+	<label>Первоначальный взнос (не менее 30%):
+		<input type="number" name="initial_payment_percent" placeholder="50" max="100" min="30" step="0.01">
 	</label>
 	<?php if (!empty($initial_payment_percent_err)): ?>
 		<p class="error"><?= $initial_payment_percent_err ?></p>
 	<?php endif; ?>
 	
-	<label>Целевой взнос (%):
-		<input type="number" name="annual_payment_percent" value="3" max="3" min="0.5" step="0.01">
+	<label>Целевой взнос (максимум: 3% минимум: 0.5%):
+		<input type="number" name="annual_payment_percent" placeholder="" ="3" max="3" min="0.5" step="0.01">
 	</label>
 	<?php if (!empty($annual_payment_percent_err)): ?>
 		<p class="error"><?= $annual_payment_percent_err ?></p>
 	<?php endif; ?>
 	
-	<label>Срок рассрочки (мес):
-		<input type="number" name="months" value="12" max="180" min="1" step="1">
+	<label>Срок рассрочки (не более 180 мес.):
+		<input type="number" name="months" placeholder="" ="12" max="180" min="1" step="1">
 	</label>
 	<?php if (!empty($months_err)): ?>
 		<p class="error"><?= $months_err ?></p>

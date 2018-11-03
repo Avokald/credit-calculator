@@ -23,7 +23,7 @@ function convertTextToInt(string $str): int {
 }
 
 // To send an email start smtp mail-server on port 25
-function sendLinkMail($email_address) {
+function sendLinkMail($email_address, $user_hash) {
 	$name = 'avokald';
 	$email = 'baldykov_a@yahoo.com';
 	$message = "Your plan is available: calc.local/result?h={$user_hash}";

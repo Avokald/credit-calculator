@@ -1,9 +1,5 @@
 <?php
 
-$email_address_err = $price_err = $initial_payment_percent_err = $annual_payment_percent_err = $months_err = '';
-$email_address = $price = $initial_payment_percent = $annual_payment_percent = $months = '';
-$email_address_unsafe = $price_unsafe = $initial_payment_percent_unsafe = $annual_payment_percent_unsafe = $months_unsafe = '';
-
 function formCorrect() {
 	global $email_address_err, $price_err, $initial_payment_percent_err, $annual_payment_percent_err, $months_err;
 	global $email_address, $price, $initial_payment_percent, $annual_payment_percent, $months;

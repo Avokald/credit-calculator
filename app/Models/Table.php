@@ -1,6 +1,6 @@
 <?php
 
-include('./Column.php');
+include('../app/Models/Column.php');
 
 Class Table {
 	private $columns = [];

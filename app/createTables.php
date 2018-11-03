@@ -1,9 +1,8 @@
 <?php
 
-include('./Table.php');
+include('../app/Models/Table.php');
 
-
-$tableUsers = new Table($conn, 'users', function($table) {
+$tableUsers = new Table($connection, 'users', function($table) {
 	$table->createColumn('id')
 		  ->setType('int')
 		  ->setAutoIncrement()
@@ -30,7 +29,7 @@ $tableUsers = new Table($conn, 'users', function($table) {
 	}
 );
 
-$tableOverviews = new Table($conn, 'overviews', function($table) {
+$tableOverviews = new Table($connection, 'overviews', function($table) {
 	$table->createColumn('id')
 		  ->setType('int')
 		  ->setAutoIncrement()
@@ -61,7 +60,7 @@ $tableOverviews = new Table($conn, 'overviews', function($table) {
     $table->setForeignKey('user_id', 'users', 'id');
 });
 
-$tablePlans = new Table($conn, 'plans', function($table) {
+$tablePlans = new Table($connection, 'plans', function($table) {
 	$table->createColumn('id')
 	      ->setType('int')
 	      ->setAutoIncrement()
@@ -89,7 +88,7 @@ $tablePlans = new Table($conn, 'plans', function($table) {
 	$table->setForeignKey('user_id', 'users', 'id');
 });
 
-$tableHashes = new Table($conn, 'hashes', function($table) {
+$tableHashes = new Table($connection, 'hashes', function($table) {
 	$table->createColumn('id')
 	      ->setType('int')
 	      ->setAutoIncrement()

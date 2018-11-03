@@ -15,7 +15,7 @@ Class Table {
 		$this->connection = $conn;
 		$this->name = $table_name;
 		call_user_func($myfunc, $this);
-    	//$this->makeCreationQuery();
+    	$this->makeCreationQuery();
 		return $this;
 	}
 	
@@ -34,8 +34,8 @@ Class Table {
 
 	public function makeCreationQuery() {
 		$this->creation_query = "create table {$this->name} (";
-		$this->creation_query .= "{$this->foreign_key}, ";
-		$this->creation_query .= "{$this->index}, ";
+		$this->creation_query .= "{$this->foreign_key} ";
+		$this->creation_query .= "{$this->index} ";
 
 		foreach(array_slice($this->columns, 0, count($this->columns) - 1) as $name => $column) {
 			$this->creation_query .= "{$column->createQuery()}, ";
@@ -47,11 +47,11 @@ Class Table {
 	}
 
 	public function setIndex($column_name) {
-		$this->index .= "index({$column_name})";
+		$this->index .= "index({$column_name}),";
 	}
 
 	public function setForeignKey($column_name, $references_table, $references_column) {
-		$this->foreign_key .= "foreign key ({$column_name}) references {$references_table}({$references_column})";
+		$this->foreign_key .= "foreign key ({$column_name}) references {$references_table}({$references_column}),";
 	}
 
 	public function initializeTable() {
@@ -110,7 +110,11 @@ Class Table {
 	}
 
 	public function getSelection() {
-		return $this->connection->query($this->selection_query)->fetch()[0];
+		return $this->connection->query($this->selection_query)->fetchAll();
+	}
+
+	public function __toString() {
+		return $this->creation_query;
 	}
 }
 

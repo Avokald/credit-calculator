@@ -63,4 +63,8 @@ Class Column {
 		$this->query = "{$this->name} {$this->type} {$this->nullable} {$this->unique} {$this->auto_increment} {$this->primary_key} {$this->timestamp}";
 		return $this->query;
 	}
+
+	public function __toString() {
+		return $this->query;
+	}
 } 

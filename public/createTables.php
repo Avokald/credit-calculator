@@ -28,7 +28,6 @@ $tableUsers = new Table($conn, 'users', function($table) {
 	      ->setType('timestamp')
 	      ->setDefaultTimestamp();
 	}
-
 );
 
 $tableOverviews = new Table($conn, 'overviews', function($table) {

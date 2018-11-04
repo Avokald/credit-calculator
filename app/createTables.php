@@ -1,6 +1,6 @@
 <?php
 
-include('../app/Models/Table.php');
+require_once '../app/Models/Table.php';
 
 $tableUsers = new Table($connection, 'users', function($table) {
 	$table->createColumn('id')

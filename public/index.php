@@ -1,6 +1,7 @@
 <?php
-include '../app/initialSetup.php';
 
-include '../app/helperFunctions.php';
+require_once '../app/initialSetup.php';
 
-include '../routes/web.php';
+require_once '../app/helperFunctions.php';
+
+require_once '../routes/web.php';

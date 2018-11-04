@@ -2,23 +2,22 @@
 
 
 function store() {
-	include '../app/validateForm.php';
+	require_once '../app/validateForm.php';
 
 	if (!formCorrect()) {
-		include '../resources/views/index.php';
+		require_once '../resources/views/index.php';
 	}
 	else {
 		try {
 			global $email_address, $price, $initial_payment_percent, $annual_payment_percent, $months;
 
 			// Connection to database
-			include '../env.php';
+			require_once '../env.php';
 		    $connection = new PDO("mysql:host=" . SERVERNAME . ";dbname=" . DBNAME, USERNAME, PASSWORD);
 		    $connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		    $connection->exec('use calc;');
 
-
-		    include '../app/createTables.php';
+			require_once '../app/createTables.php';
 		    // Table existence check and creation
 			if (!tableExists($connection, 'users')) {
 				$tableUsers->initializeTable();
@@ -105,7 +104,7 @@ function store() {
 		    // TABLE 4
 		    $user_created_at = $tableUsers->select(['UNIX_TIMESTAMP(created_at)'])
 		                                  ->from()
-		                                  ->where(['id = ' . $user_id])
+		                                  ->where(['id', '=', $user_id])
 		                                  ->getSelection();
 		    
 		    // Creating unique hash
@@ -128,7 +127,7 @@ function store() {
 
 			sendLinkMail($email_address, $user_hash);
 
-			include '../resources/views/success.php';
+			require_once '../resources/views/success.php';
 			$connection = null;
 		}
 		catch(PDOException $e) {
@@ -140,6 +139,6 @@ function store() {
 }
 
 function index() {
-	include '../resources/views/index.php';
+	require_once '../resources/views/index.php';
 }
 

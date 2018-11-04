@@ -1,6 +1,6 @@
 <?php
 
-include('../app/Models/Column.php');
+require_once '../app/Models/Column.php';
 
 Class Table {
 	private $columns = [];
@@ -10,6 +10,8 @@ Class Table {
 	private $index = '';
 	private $insertion_query = '';
 	private $connection = null;
+	private $selection_query = '';
+	private $selection_input = [];
 
 	public function __construct($conn, string $table_name, Closure $myfunc) {
 		$this->connection = $conn;
@@ -75,8 +77,8 @@ Class Table {
 		$column_names .= "{$last_key}) ";
 		$column_values .= ":{$last_key}); ";
 		$this->insertion_query .= $column_names . $column_values;
+		
 		$prepared_insertion_query = $this->connection->prepare($this->insertion_query);
-
 		$prepared_insertion_query->execute($values);
 		return;
 	}
@@ -100,17 +102,32 @@ Class Table {
 		return $this;
 	}
 
-	public function where($values = []) {
-		$this->selection_query .= "where ";
-		foreach (array_slice($values, 0, count($values) - 1) as $value) {
-			$this->selection_query .= "{$value}, ";
-		}
-		$this->selection_query .= end($values) . ' ';
+	public function where($condition) {
+		$this->selection_query .= " where ";
+		$this->selection_query .= "{$condition[0]} {$condition[1]} :{$condition[0]}";
+		$this->selection_input[":{$condition[0]}"] = $condition[2];
+		return $this;
+	}
+
+	public function and($condition) {
+		$this->selection_query .= ' and ';
+		$this->selection_query .= "{$condition[0]} {$condition[1]} :{$condition[0]}";
+		$this->selection_input[":{$condition[0]}"] = $condition[2];
+		return $this;
+	}
+
+	public function or($condition) {
+		$this->selection_query .= ' or ';
+		$this->selection_query .= "{$condition[0]} {$condition[1]} :{$condition[0]}";
+		$this->selection_input[":{$condition[0]}"] = $condition[2];
 		return $this;
 	}
 
 	public function getSelection() {
-		return $this->connection->query($this->selection_query)->fetchAll();
+		$prepared_selection_query = $this->connection->prepare($this->selection_query);
+		$prepared_selection_query->execute($this->selection_input);
+
+		return $prepared_selection_query->fetchAll();
 	}
 
 	public function __toString() {

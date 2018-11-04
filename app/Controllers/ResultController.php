@@ -13,64 +13,53 @@ function index() {
 
 
 	try {
-		include('../env.php');
+		require_once '../env.php';
 		// Connection to database
-	    $conn = new PDO("mysql:host=" . SERVERNAME . ";dbname=" . DBNAME, USERNAME, PASSWORD);
-	    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-	    $conn->exec('use calc;');
+	    $connection = new PDO("mysql:host=" . SERVERNAME . ";dbname=" . DBNAME, USERNAME, PASSWORD);
+	    $connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+	    $connection->exec('use calc;');
+
+		require_once '../app/createTables.php';
 	    if (empty($_GET['h'])) {
-	    	echo 'Create your own plan to view this page';
+	    	echo '<a href="/">Create your own plan to view this page</a>';
 	    	die();
 	    }
 	    try {
-		    $select_hash_query = '
-		    	select user_id
-		    	from hashes
-		    	where hash = :hash;
-		    ';
+	    	$user_ids = $tableHashes->select(['user_id'])
+	    	                        ->from()
+	    	                        ->where(['hash', '=', $_GET['h']])
+	    	                        ->getSelection();
 
-		    $prepared_select_hash_query = $conn->prepare($select_hash_query);
-
-		    if ($prepared_select_hash_query->execute([':hash' => $_GET['h']])) {
-			    $hash_get = $prepared_select_hash_query->fetch();
-			}
-
-			if (empty($hash_get)) {
+			if (empty($user_ids)) {
 				echo 'Incorrect link';
 				die();
 			}
-	        $user_id = $hash_get[0];
+	        $user_id = $user_ids[0][0];
 		}
 		catch(PDOException $e) {
 			echo 'Create your own plan to view this page';
 			die();
 		}
 
-	    $select_overview_query = '
-	        select initial_payment_currency, entrance_fee_currency, monthly_payment_currency, total_overpayment_currency, overpayment_w_entrance_percent, overpayment_w_o_entrance_percent
-	        from overviews
-	        where user_id = :user_id;
-	    ';
+		$overviews = $tableOverviews->select(['initial_payment_currency', 'entrance_fee_currency', 
+    	   				'monthly_payment_currency', 'total_overpayment_currency', 
+			    	    'overpayment_w_entrance_percent', 'overpayment_w_o_entrance_percent'])
+			    	   		          ->from()
+			    	   		          ->where(['user_id', '=', $user_id])
+			    	   		          ->getSelection();
+	    $overview = $overviews[0];
 
-	    $select_plan_query = '
-	    	select month, remaining_credit_currency, earmarked_contribution_currency, share_contribution_currency, sum_over_month_currency
-	    	from plans
-	    	where user_id = :user_id;
-		';
-		$prepared_select_plan_query = $conn->prepare($select_plan_query);
-	    $prepared_select_overview_query = $conn->prepare($select_overview_query);
-
-	    $prepared_select_overview_query->execute([':user_id' => $user_id]);
-		$prepared_select_plan_query->execute([':user_id' => $user_id]);
-
-		$plans = $prepared_select_plan_query->fetchAll();
-	    $overview = $prepared_select_overview_query->fetchAll()[0];
-
-	    $conn = null;
-	    include '../resources/views/result.php';
+		$plans = $tablePlans->select(['month', 'remaining_credit_currency', 
+			'earmarked_contribution_currency', 'share_contribution_currency', 'sum_over_month_currency'])
+		                          ->from()
+		                          ->where(['user_id', '=', $user_id])
+		                          ->getSelection();
+		
+	    $connection = null;
+	    require_once '../resources/views/result.php';
 	}
 	catch(PDOException $e) {
-		$conn = null;
+		$connection = null;
 	    echo "Connection failed: " . $e->getMessage();
 	}
 }
